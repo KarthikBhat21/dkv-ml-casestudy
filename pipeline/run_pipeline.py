@@ -119,6 +119,10 @@ def build_pipeline(env: Environment):
                 type=AssetTypes.URI_FOLDER,
                 mode=InputOutputModes.RO_MOUNT,
             ),
+            "validation_status": Input(
+                type=AssetTypes.URI_FOLDER,
+                mode=InputOutputModes.RO_MOUNT,
+            ),
         },
         outputs={
             "train_data": Output(
@@ -132,7 +136,7 @@ def build_pipeline(env: Environment):
         },
         environment=env,
         compute=COMPUTE_CLUSTER,
-        code=REPO_ROOT,        # ← whole repo uploaded so params.yaml is included
+        code=REPO_ROOT,
     )
 
     # ── Step 3: Train ──────────────────────────────────────────────────────────
@@ -217,9 +221,13 @@ def build_pipeline(env: Environment):
         # Step 1 — Validate columns
         val = validate_component(raw_data=raw_data)
 
-        # Step 2 — Preprocess (runs only after validation passes)
-        pre = preprocess_component(raw_data=raw_data)
-        pre.after(val)
+        # Step 2 — Preprocess
+        # Passing validation_status as input creates an explicit dependency
+        # so preprocess only runs after validation completes successfully
+        pre = preprocess_component(
+            raw_data=raw_data,
+            validation_status=val.outputs.validation_status,
+        )
 
         # Step 3 — Train
         tr = train_component(train_data=pre.outputs.train_data)
