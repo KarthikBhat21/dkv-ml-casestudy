@@ -39,9 +39,7 @@ def get_args():
 
     if args.input_train is None:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        args.input_train  = os.path.join(
-            BASE_DIR, "artifacts", "data", "processed", "train.csv"
-        )
+        args.input_train  = os.path.join(BASE_DIR, "artifacts", "preprocessed_data", "train.csv")
         args.output_model = os.path.join(BASE_DIR, "artifacts", "models")
 
     return args

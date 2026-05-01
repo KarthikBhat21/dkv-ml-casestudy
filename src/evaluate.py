@@ -22,14 +22,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEST_PATH  = os.path.join(BASE_DIR, "artifacts", "data", "processed", "test.csv")
-MODEL_PATH = os.path.join(BASE_DIR, "artifacts", "models", "model.pkl")
-EVAL_DIR   = os.path.join(BASE_DIR, "artifacts", "evaluation")
-MLFLOW_DIR = os.path.join(BASE_DIR, "artifacts", "mlruns")
-
 TARGET = "default"
+
+
+def get_args():
+    import argparse
+    parser = argparse.ArgumentParser(description="Evaluate credit default classifier.")
+    parser.add_argument("--input_test",  type=str, default=None)
+    parser.add_argument("--input_model", type=str, default=None)
+    parser.add_argument("--output_dir",  type=str, default=None)
+    args = parser.parse_args()
+
+    # Fall back to local paths when not running inside Azure ML
+    if args.input_test is None:
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        args.input_test  = os.path.join(BASE_DIR, "artifacts", "preprocessed_data", "test.csv")
+        args.input_model = os.path.join(BASE_DIR, "artifacts", "models")
+        args.output_dir  = os.path.join(BASE_DIR, "artifacts", "evaluation")
+
+    return args
 
 
 def plot_confusion_matrix(cm: np.ndarray, output_dir: str) -> str:
@@ -39,8 +50,10 @@ def plot_confusion_matrix(cm: np.ndarray, output_dir: str) -> str:
 
     classes    = ["No Default (0)", "Default (1)"]
     tick_marks = range(len(classes))
-    ax.set_xticks(tick_marks);  ax.set_xticklabels(classes, rotation=30, ha="right", fontsize=9)
-    ax.set_yticks(tick_marks);  ax.set_yticklabels(classes, fontsize=9)
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(classes, rotation=30, ha="right", fontsize=9)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes, fontsize=9)
 
     thresh = cm.max() / 2.0
     for i in range(cm.shape[0]):
@@ -62,31 +75,61 @@ def plot_confusion_matrix(cm: np.ndarray, output_dir: str) -> str:
     return path
 
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_test",  type=str, required=True)
-    parser.add_argument("--input_model", type=str, required=True)
-    parser.add_argument("--output_dir",  type=str, required=True)
-    args = parser.parse_args()
+def setup_mlflow():
+    """
+    On Azure ML, tracking URI is auto-injected.
+    Locally, use SQLite to avoid Windows path-with-spaces bug.
+    """
+    if "AZUREML_RUN_ID" not in os.environ:
+        BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        MLFLOW_DB = os.path.join(BASE_DIR, "artifacts", "mlruns", "mlflow.db")
+        os.makedirs(os.path.dirname(MLFLOW_DB), exist_ok=True)
+        mlflow.set_tracking_uri(f"sqlite:///{MLFLOW_DB}")
+        mlflow.set_experiment("dkv-credit-default-local")
+        logger.info("MLflow tracking: SQLite (local mode)")
+    else:
+        logger.info("MLflow tracking: Azure ML (cloud mode)")
 
+
+def main():
+    args = get_args()
     os.makedirs(args.output_dir, exist_ok=True)
 
+    # ── Load ──────────────────────────────────────────────────────────────────
+    logger.info("Loading test data from: %s", args.input_test)
     df     = pd.read_csv(args.input_test)
     X_test = df.drop(columns=[TARGET])
     y_test = df[TARGET]
+    logger.info("Test set: %d rows", len(y_test))
 
-    model       = joblib.load(os.path.join(args.input_model, "model.pkl"))
+    logger.info("Loading model from: %s", args.input_model)
+    model = joblib.load(os.path.join(args.input_model, "model.pkl"))
+
+    # ── Predict ───────────────────────────────────────────────────────────────
     y_pred      = model.predict(X_test)
     y_pred_prob = model.predict_proba(X_test)[:, 1]
 
+    # ── Metrics ───────────────────────────────────────────────────────────────
     accuracy  = accuracy_score(y_test, y_pred)
     auc       = roc_auc_score(y_test, y_pred_prob)
     f1        = f1_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall    = recall_score(y_test, y_pred)
 
-    logger.info("Accuracy: %.4f | AUC: %.4f | F1: %.4f", accuracy, auc, f1)
+    logger.info("=== Evaluation Results ===")
+    logger.info("Accuracy  : %.4f", accuracy)
+    logger.info("ROC-AUC   : %.4f", auc)
+    logger.info("F1 Score  : %.4f", f1)
+    logger.info("Precision : %.4f", precision)
+    logger.info("Recall    : %.4f", recall)
+
+    report = classification_report(
+        y_test, y_pred, target_names=["No Default", "Default"]
+    )
+    logger.info("\n%s", report)
+
+    # ── MLflow ────────────────────────────────────────────────────────────────
+    setup_mlflow()
 
     with mlflow.start_run():
         mlflow.log_metrics({
@@ -96,19 +139,17 @@ def main():
             "test_precision": round(precision, 4),
             "test_recall":    round(recall, 4),
         })
+
         cm      = confusion_matrix(y_test, y_pred)
         cm_path = plot_confusion_matrix(cm, args.output_dir)
         mlflow.log_artifact(cm_path, artifact_path="evaluation")
 
-        report = classification_report(
-            y_test, y_pred, target_names=["No Default", "Default"]
-        )
         report_path = os.path.join(args.output_dir, "classification_report.txt")
         with open(report_path, "w") as f:
             f.write(report)
         mlflow.log_artifact(report_path, artifact_path="evaluation")
 
-    logger.info("Evaluation complete ✓")
+    logger.info("Evaluation complete ✓  Artefacts → %s", args.output_dir)
 
 
 if __name__ == "__main__":

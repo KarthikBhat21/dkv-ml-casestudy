@@ -70,10 +70,40 @@ def get_or_create_environment(ml_client: MLClient) -> Environment:
 
 def build_pipeline(env: Environment):
 
-    # ── Step 1: Preprocess ─────────────────────────────────────────────────────
+    # ── Step 1: Validate ───────────────────────────────────────────────────────
+    validate_component = command(
+        name="validate",
+        display_name="Step 1 — Validate Data",
+        description=(
+            "Validate raw dataset column names against schema.yaml. "
+            "Pipeline stops immediately if validation fails."
+        ),
+        command=(
+            "python src/validate.py"
+            " --input_data ${{inputs.raw_data}}"
+            " --output_status ${{outputs.validation_status}}/status.txt"
+        ),
+        inputs={
+            "raw_data": Input(
+                type=AssetTypes.URI_FOLDER,
+                mode=InputOutputModes.RO_MOUNT,
+            ),
+        },
+        outputs={
+            "validation_status": Output(
+                type=AssetTypes.URI_FOLDER,
+                mode=InputOutputModes.RW_MOUNT,
+            ),
+        },
+        environment=env,
+        compute=COMPUTE_CLUSTER,
+        code=REPO_ROOT,
+    )
+    
+    # ── Step 2: Preprocess ─────────────────────────────────────────────────────
     preprocess_component = command(
         name="preprocess",
-        display_name="Step 1 — Preprocess",
+        display_name="Step 2 — Preprocess",
         description=(
             "Load raw XLS, clean, engineer features, "
             "scale with StandardScaler, split 80/20 train/test."
@@ -105,10 +135,10 @@ def build_pipeline(env: Environment):
         code=REPO_ROOT,        # ← whole repo uploaded so params.yaml is included
     )
 
-    # ── Step 2: Train ──────────────────────────────────────────────────────────
+    # ── Step 3: Train ──────────────────────────────────────────────────────────
     train_component = command(
         name="train",
-        display_name="Step 2 — Train (7 models → best → tune)",
+        display_name="Step 3 — Train (7 models → best → tune)",
         description=(
             "Compare 7 classifiers with default params (CV ROC-AUC), "
             "pick winner, run RandomizedSearchCV on winner, "
@@ -136,10 +166,10 @@ def build_pipeline(env: Environment):
         code=REPO_ROOT,        # ← params.yaml accessible here
     )
 
-    # ── Step 3: Evaluate ───────────────────────────────────────────────────────
+    # ── Step 4: Evaluate ───────────────────────────────────────────────────────
     evaluate_component = command(
         name="evaluate",
-        display_name="Step 3 — Evaluate",
+        display_name="Step 4 — Evaluate",
         description=(
             "Evaluate best model on held-out test set. "
             "Log accuracy, AUC, F1, precision, recall. "
@@ -176,25 +206,36 @@ def build_pipeline(env: Environment):
     @pipeline(
         name="dkv_credit_default_pipeline",
         description=(
-            "End-to-end credit default prediction: "
-            "preprocess → multi-model train → evaluate. "
-            "Auto-selects best classifier by CV ROC-AUC, "
-            "tunes with RandomizedSearchCV."
+            "End-to-end credit default prediction pipeline: "
+            "validate → preprocess → train → evaluate. "
+            "Pipeline stops if column validation fails."
         ),
         display_name="DKV Credit Default — Full Pipeline",
     )
     def credit_default_pipeline(raw_data: Input):
+
+        # Step 1 — Validate columns
+        val = validate_component(raw_data=raw_data)
+
+        # Step 2 — Preprocess (runs only after validation passes)
         pre = preprocess_component(raw_data=raw_data)
-        tr  = train_component(train_data=pre.outputs.train_data)
-        ev  = evaluate_component(
+        pre.after(val)
+
+        # Step 3 — Train
+        tr = train_component(train_data=pre.outputs.train_data)
+
+        # Step 4 — Evaluate
+        ev = evaluate_component(
             test_data=pre.outputs.test_data,
             model_dir=tr.outputs.model_dir,
         )
+
         return {
-            "train_data":  pre.outputs.train_data,
-            "test_data":   pre.outputs.test_data,
-            "model_dir":   tr.outputs.model_dir,
-            "eval_output": ev.outputs.eval_output,
+            "validation_status": val.outputs.validation_status,
+            "train_data":        pre.outputs.train_data,
+            "test_data":         pre.outputs.test_data,
+            "model_dir":         tr.outputs.model_dir,
+            "eval_output":       ev.outputs.eval_output,
         }
 
     pipeline_job = credit_default_pipeline(

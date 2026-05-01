@@ -1,7 +1,6 @@
 import logging
 import os
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -12,27 +11,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INPUT_PATH  = os.path.join(BASE_DIR, "artifacts", "data", "credit_card_default_raw.xls")
-TRAIN_PATH  = os.path.join(BASE_DIR, "artifacts", "data", "processed", "train.csv")
-TEST_PATH   = os.path.join(BASE_DIR, "artifacts", "data", "processed", "test.csv")
-
-TARGET      = "default"
-PAY_COLS    = ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]
-BILL_COLS   = ["BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6"]
-PAY_AMT_COLS= ["PAY_AMT1", "PAY_AMT2", "PAY_AMT3", "PAY_AMT4", "PAY_AMT5", "PAY_AMT6"]
-NUMERIC_COLS= ["LIMIT_BAL", "AGE"] + BILL_COLS + PAY_AMT_COLS + [
+TARGET       = "default"
+PAY_COLS     = ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]
+BILL_COLS    = ["BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6"]
+PAY_AMT_COLS = ["PAY_AMT1", "PAY_AMT2", "PAY_AMT3", "PAY_AMT4", "PAY_AMT5", "PAY_AMT6"]
+NUMERIC_COLS = ["LIMIT_BAL", "AGE"] + BILL_COLS + PAY_AMT_COLS + [
     "avg_bill_amt", "avg_pay_amt", "total_delay", "utilisation_ratio", "payment_ratio"
 ]
 
 
-def load_data(path: str) -> pd.DataFrame:
-    logger.info("Loading dataset from: %s", path)
-    # Row 0 is a title row; actual column headers are on row 1
-    df = pd.read_excel(path, engine="xlrd", header=1)
+def get_args():
+    import argparse
+    parser = argparse.ArgumentParser(description="Preprocess credit default dataset.")
+    parser.add_argument("--input_data",   type=str, default=None)
+    parser.add_argument("--output_train", type=str, default=None)
+    parser.add_argument("--output_test",  type=str, default=None)
+    args = parser.parse_args()
+
+    # Fall back to local paths when not running inside Azure ML
+    if args.input_data is None:
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        args.input_data   = os.path.join(BASE_DIR, "data", "credit_card_default_raw.xls")
+        args.output_train = os.path.join(BASE_DIR, "artifacts", "preprocessed_data", "train.csv")
+        args.output_test  = os.path.join(BASE_DIR, "artifacts", "preprocessed_data", "test.csv")
+
+    return args
+
+
+def load_data(input_path: str) -> pd.DataFrame:
+    logger.info("Loading dataset from: %s", input_path)
+
+    # Azure ML passes a folder — find the XLS file inside
+    if os.path.isdir(input_path):
+        for fname in os.listdir(input_path):
+            if fname.endswith(".xls") or fname.endswith(".xlsx"):
+                input_path = os.path.join(input_path, fname)
+                break
+
+    # Row 0 is a title row — actual headers are on row 1
+    df = pd.read_excel(input_path, engine="xlrd", header=1)
     df.drop(columns=["ID"], inplace=True)
     df.rename(columns={"default payment next month": TARGET}, inplace=True)
+
     logger.info("Loaded %d rows x %d columns", *df.shape)
     logger.info("Default rate: %.2f%%", df[TARGET].mean() * 100)
     return df
@@ -40,12 +60,9 @@ def load_data(path: str) -> pd.DataFrame:
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Cleaning data...")
-    # Clip LIMIT_BAL and AGE to sensible ranges
     df["LIMIT_BAL"] = df["LIMIT_BAL"].clip(lower=0)
     df["AGE"]       = df["AGE"].clip(lower=18, upper=100)
-    # Fix undocumented EDUCATION categories (0, 5, 6 → 4=others)
     df["EDUCATION"] = df["EDUCATION"].replace({0: 4, 5: 4, 6: 4})
-    # Fix undocumented MARRIAGE category (0 → 3=others)
     df["MARRIAGE"]  = df["MARRIAGE"].replace({0: 3})
     logger.info("Missing values after cleaning: %d", df.isnull().sum().sum())
     return df
@@ -53,11 +70,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Engineering features...")
-    df["avg_bill_amt"]     = df[BILL_COLS].mean(axis=1)
-    df["avg_pay_amt"]      = df[PAY_AMT_COLS].mean(axis=1)
-    df["total_delay"]      = df[PAY_COLS].clip(lower=0).sum(axis=1)
-    df["utilisation_ratio"]= df["avg_bill_amt"] / (df["LIMIT_BAL"] + 1e-6)
-    df["payment_ratio"]    = df["avg_pay_amt"] / (df["avg_bill_amt"].abs() + 1e-6)
+    df["avg_bill_amt"]      = df[BILL_COLS].mean(axis=1)
+    df["avg_pay_amt"]       = df[PAY_AMT_COLS].mean(axis=1)
+    df["total_delay"]       = df[PAY_COLS].clip(lower=0).sum(axis=1)
+    df["utilisation_ratio"] = df["avg_bill_amt"] / (df["LIMIT_BAL"] + 1e-6)
+    df["payment_ratio"]     = df["avg_pay_amt"] / (df["avg_bill_amt"].abs() + 1e-6)
     logger.info("Feature engineering done. Shape: %d x %d", *df.shape)
     return df
 
@@ -71,7 +88,7 @@ def split_and_scale(df: pd.DataFrame):
     )
     logger.info("Train: %d rows | Test: %d rows", len(X_train), len(X_test))
 
-    # Fit scaler on train only — prevent data leakage
+    # Fit scaler on train only — prevents data leakage
     scaler = StandardScaler()
     X_train[NUMERIC_COLS] = scaler.fit_transform(X_train[NUMERIC_COLS])
     X_test[NUMERIC_COLS]  = scaler.transform(X_test[NUMERIC_COLS])
@@ -85,21 +102,12 @@ def split_and_scale(df: pd.DataFrame):
 
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_data",   type=str, required=True)
-    parser.add_argument("--output_train", type=str, required=True)
-    parser.add_argument("--output_test",  type=str, required=True)
-    args = parser.parse_args()
+    args = get_args()
 
-    # Make output dirs
     os.makedirs(os.path.dirname(args.output_train), exist_ok=True)
     os.makedirs(os.path.dirname(args.output_test),  exist_ok=True)
 
-    # Input is a folder — join filename
-    input_file = os.path.join(args.input_data, "credit_card_default_raw.xls")
-
-    df = load_data(input_file)
+    df = load_data(args.input_data)
     df = clean_data(df)
     df = engineer_features(df)
 
