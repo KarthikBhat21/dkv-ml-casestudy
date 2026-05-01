@@ -1,0 +1,20 @@
+name: ml-az-interview-task
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - azure-ai-ml
+      - azureml-mlflow
+      - pandas
+      - scikit-learn
+      - matplotlib
+      - mlflow
+      - xgboost
+      - joblib
+      - xlrd
+      - numpy
+      - openpyxl
+      - pyyaml

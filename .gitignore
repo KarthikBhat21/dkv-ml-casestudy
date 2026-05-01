@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Azure ML artifacts
+artifacts/
+mlruns/
+
+# Dataset and model files
+*.xls
+*.xlsx
+*.pkl
+*.zip
+
+# Azure credentials — never commit
+test_connection.py
+
+# Screenshots added separately
+# screenshots/

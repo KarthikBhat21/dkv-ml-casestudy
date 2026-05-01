@@ -1,0 +1,50 @@
+random_search:
+  n_iter: 20
+  cv_folds: 5
+  scoring: roc_auc
+  random_state: 42
+
+LogisticRegression:
+  C:            [0.01, 0.1, 1.0, 10.0, 100.0]
+  penalty:      [l1, l2]
+  solver:       [liblinear, saga]
+  max_iter:     [500, 1000, 2000]
+
+DecisionTree:
+  max_depth:        [3, 5, 8, 10, 15, null]
+  min_samples_split: [2, 5, 10, 20]
+  min_samples_leaf:  [1, 2, 4, 8]
+  criterion:        [gini, entropy]
+
+RandomForest:
+  n_estimators:      [100, 200, 300, 500]
+  max_depth:         [4, 6, 8, 10, null]
+  min_samples_split: [2, 5, 10]
+  min_samples_leaf:  [1, 2, 4]
+  max_features:      [sqrt, log2]
+
+KNN:
+  n_neighbors: [3, 5, 7, 9, 11, 15]
+  weights:     [uniform, distance]
+  metric:      [euclidean, manhattan, minkowski]
+  leaf_size:   [20, 30, 40]
+
+AdaBoost:
+  n_estimators:  [50, 100, 200, 300]
+  learning_rate: [0.01, 0.05, 0.1, 0.5, 1.0]
+  algorithm:     [SAMME]
+
+GradientBoosting:
+  n_estimators:  [100, 200, 300]
+  max_depth:     [3, 4, 5, 6]
+  learning_rate: [0.01, 0.05, 0.1, 0.2]
+  subsample:     [0.6, 0.7, 0.8, 0.9, 1.0]
+  min_samples_split: [2, 5, 10]
+
+XGBoost:
+  n_estimators:     [100, 200, 300, 500]
+  max_depth:        [3, 4, 6, 8]
+  learning_rate:    [0.01, 0.05, 0.1, 0.2]
+  subsample:        [0.6, 0.8, 1.0]
+  colsample_bytree: [0.6, 0.8, 1.0]
+  gamma:            [0, 0.1, 0.2, 0.5]
