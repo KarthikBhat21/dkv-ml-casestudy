@@ -31,6 +31,14 @@ Gradient Boosting — selected automatically by cross-validated ROC-AUC, tuned w
 - **Tracking:** MLflow (built-in Azure ML integration)
 - **Registry:** Model auto-registered on pipeline completion
 
+## Batch Endpoint Deployment
+The trained model is deployed to an Azure ML Managed Batch Endpoint for on-demand scoring.
+
+- **score.py** — Loads the registered model, applies the same feature engineering as preprocessing, returns predictions
+- **deploy_and_test.py** — Creates the endpoint, deploys the latest registered model version, and tests it with sample data
+- **Output:** `predictions.csv` with prediction (0/1), default probability, and label
+- **Version-agnostic:** Uses `label="latest"` to always deploy the most recently registered model
+
 ## How to Run
 ```bash
 # Local test — run in order
@@ -39,8 +47,11 @@ python src/preprocess.py
 python src/train.py
 python src/evaluate.py
 
-# Submit to Azure ML
+# Submit to Azure ML (4-step pipeline)
 python pipeline/run_pipeline.py
+
+# Deploy and test batch endpoint
+python deployment/deploy_and_test.py
 ```
 
 ## Notes
@@ -50,8 +61,10 @@ python pipeline/run_pipeline.py
 - `StandardScaler` fitted on training data only — no data leakage
 - RandomizedSearchCV applied to winning model only — faster than tuning all models
 - Model auto-registered in Azure ML Model Registry on pipeline completion
+- Batch endpoint chosen over online endpoint for credit risk scoring use case (overnight scoring of many customers vs real-time single requests)
 
 ## Screenshots
 See `screenshots/` folder for:
 - Successful Azure ML pipeline run (all 4 steps green)
 - Registered model in Azure ML workspace
+- Batch endpoint deployment and prediction output

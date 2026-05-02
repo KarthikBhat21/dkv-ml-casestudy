@@ -47,23 +47,18 @@ def get_ml_client() -> MLClient:
 # ── Environment ───────────────────────────────────────────────────────────────
 
 def get_or_create_environment(ml_client: MLClient) -> Environment:
-    try:
-        env = ml_client.environments.get(ENVIRONMENT_NAME, label="latest")
-        logger.info("Reusing existing environment: %s", ENVIRONMENT_NAME)
-        return env
-    except Exception:
-        logger.info("Registering new environment: %s", ENVIRONMENT_NAME)
-        env = Environment(
-            name=ENVIRONMENT_NAME,
-            description="DKV ML case study — multi-model + RandomizedSearchCV + azureml-mlflow",
-            conda_file=CONDA_FILE,
-            image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
-        )
-        env = ml_client.environments.create_or_update(env)
-        logger.info(
-            "Environment registered: %s (version %s)", env.name, env.version
-        )
-        return env
+    logger.info("Registering new environment version: %s", ENVIRONMENT_NAME)
+    env = Environment(
+        name=ENVIRONMENT_NAME,
+        description="DKV ML case study — multi-model + RandomizedSearchCV + azureml-mlflow + azureml-core",
+        conda_file=CONDA_FILE,
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
+    )
+    env = ml_client.environments.create_or_update(env)
+    logger.info(
+        "Environment registered: %s (version %s)", env.name, env.version
+    )
+    return env
 
 
 # ── Pipeline definition ───────────────────────────────────────────────────────

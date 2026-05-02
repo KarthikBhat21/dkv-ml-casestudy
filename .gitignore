@@ -233,5 +233,10 @@ mlruns/
 # Azure credentials — never commit
 test_connection.py
 
+# Deployment
+
+deployment/test_data/
+deployment/results/
+
 # Screenshots added separately
 # screenshots/

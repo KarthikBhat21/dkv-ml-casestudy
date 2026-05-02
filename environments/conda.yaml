@@ -8,6 +8,7 @@ dependencies:
   - pip:
       - azure-ai-ml
       - azureml-mlflow
+      - azureml-core
       - pandas
       - scikit-learn
       - matplotlib
