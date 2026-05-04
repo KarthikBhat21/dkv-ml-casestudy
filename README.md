@@ -65,6 +65,6 @@ python deployment/deploy_and_test.py
 
 ## Screenshots
 See `screenshots/` folder for:
-- Successful Azure ML pipeline run (all 4 steps green)
+- Successful Azure ML pipeline run (all 4 steps)
 - Registered model in Azure ML workspace
-- Batch endpoint deployment and prediction output
+- Batch endpoint deployment
