@@ -15,21 +15,21 @@ logger = logging.getLogger(__name__)
 
 def get_args():
     parser = argparse.ArgumentParser(description="Validate raw dataset columns.")
-    parser.add_argument("--input_data",    type=str, default=None)
+    parser.add_argument("--input_data", type=str, default=None)
     parser.add_argument("--output_status", type=str, default=None)
     args = parser.parse_args()
 
     # Fall back to local paths when not running inside Azure ML
     if args.input_data is None:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        args.input_data    = os.path.join(BASE_DIR, "data", "credit_card_default_raw.xls")
+        args.input_data = os.path.join(BASE_DIR, "data", "credit_card_default_raw.xls")
         args.output_status = os.path.join(BASE_DIR, "artifacts", "validation_status.txt")
     return args
 
 
 def load_schema() -> dict:
     """Load schema.yaml from repo root."""
-    base_dir    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     schema_path = os.path.join(base_dir, "schema.yaml")
 
     if not os.path.exists(schema_path):
@@ -44,7 +44,7 @@ def load_schema() -> dict:
 
 
 def load_data(input_path: str) -> pd.DataFrame:
-    """Load raw XLS file. Handle both direct file path and folder (Azure ML)."""
+    """Load raw XLS file."""
     logger.info("Loading data from: %s", input_path)
 
     # Azure ML passes a folder — find the XLS file inside
@@ -54,10 +54,10 @@ def load_data(input_path: str) -> pd.DataFrame:
                 input_path = os.path.join(input_path, fname)
                 break
 
-    # Row 0 is a title row — actual headers are on row 1
+    # Read the data
     df = pd.read_excel(input_path, engine="xlrd", header=1)
 
-    # Drop ID column — not a feature
+    # Drop ID column
     df.drop(columns=["ID"], errors="ignore", inplace=True)
 
     logger.info("Loaded %d rows x %d columns", *df.shape)
@@ -67,8 +67,7 @@ def load_data(input_path: str) -> pd.DataFrame:
 
 def validate_columns(df: pd.DataFrame, schema: dict) -> bool:
     """
-    Check that all expected columns are present
-    and no unexpected columns exist.
+    Check that all expected columns are present and no unexpected columns exist.
     Returns True if valid, False if not.
     """
     expected_cols = list(schema["COLUMNS"].keys())
@@ -84,36 +83,36 @@ def validate_columns(df: pd.DataFrame, schema: dict) -> bool:
     # Check for missing columns
     missing_cols = [c for c in expected_cols if c not in actual_cols]
     if missing_cols:
-        logger.error("FAIL — Missing columns: %s", missing_cols)
+        logger.error("FAIL - Missing columns: %s", missing_cols)
         validation_status = False
     else:
-        logger.info("PASS — All expected columns are present ✓")
+        logger.info("PASS - All expected columns are present!")
 
     # Check for unexpected columns
     extra_cols = [c for c in actual_cols if c not in expected_cols]
     if extra_cols:
-        logger.error("FAIL — Unexpected columns found: %s", extra_cols)
+        logger.error("FAIL - Unexpected columns found: %s", extra_cols)
         validation_status = False
     else:
-        logger.info("PASS — No unexpected columns found ✓")
+        logger.info("PASS - No unexpected columns found!")
 
     return validation_status
 
 
 def save_status(output_path: str, validation_status: bool) -> None:
-    """Save validation result to status.txt — same approach as mentor project."""
+    """Save validation result to status.txt."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(output_path, "w") as f:
         f.write(f"Validation status: {validation_status}")
 
-    logger.info("Status saved → %s", output_path)
+    logger.info("Status saved: %s", output_path)
 
 
 def main():
-    args   = get_args()
+    args = get_args()
     schema = load_schema()
-    df     = load_data(args.input_data)
+    df = load_data(args.input_data)
 
     validation_status = validate_columns(df, schema)
 
@@ -121,12 +120,12 @@ def main():
 
     logger.info("=" * 55)
     if validation_status:
-        logger.info("DATA VALIDATION PASSED ✓ — Pipeline will proceed.")
+        logger.info("DATA VALIDATION PASSED! - Pipeline stage will proceed.")
         logger.info("=" * 55)
     else:
-        logger.error("DATA VALIDATION FAILED ✗ — Pipeline will stop.")
+        logger.error("DATA VALIDATION FAILED! - Pipeline stage won't proceed.")
         logger.error("=" * 55)
-        sys.exit(1)  # Stops the Azure ML pipeline immediately
+        sys.exit(1)  # Stops the Azure ML pipelines
 
 
 if __name__ == "__main__":

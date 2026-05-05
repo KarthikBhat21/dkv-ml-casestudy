@@ -25,7 +25,7 @@ ENVIRONMENT_NAME = "dkv-ml-env"
 EXPERIMENT_NAME  = "dkv-credit-default-experiment"
 MODEL_NAME       = "credit-default-best-model"
 
-# Paths — code=REPO_ROOT so params.yaml is included in upload
+# Paths - code=REPO_ROOT so params.yaml is included in upload
 REPO_ROOT  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONDA_FILE = os.path.join(REPO_ROOT, "environments", "conda.yaml")
 
@@ -40,25 +40,44 @@ def get_ml_client() -> MLClient:
         resource_group_name=RESOURCE_GROUP,
         workspace_name=WORKSPACE_NAME,
     )
-    logger.info("Connected successfully ✓")
+    logger.info("Connected successfully!")
     return client
 
 
 # ── Environment ───────────────────────────────────────────────────────────────
 
+# def get_or_create_environment(ml_client: MLClient) -> Environment:
+#     logger.info("Registering new environment version: %s", ENVIRONMENT_NAME)
+#     env = Environment(
+#         name=ENVIRONMENT_NAME,
+#         description="DKV ML case study — multi-model + RandomizedSearchCV + azureml-mlflow + azureml-core",
+#         conda_file=CONDA_FILE,
+#         image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
+#     )
+#     env = ml_client.environments.create_or_update(env)
+#     logger.info(
+#         "Environment registered: %s (version %s)", env.name, env.version
+#     )
+#     return env
+
 def get_or_create_environment(ml_client: MLClient) -> Environment:
-    logger.info("Registering new environment version: %s", ENVIRONMENT_NAME)
-    env = Environment(
-        name=ENVIRONMENT_NAME,
-        description="DKV ML case study — multi-model + RandomizedSearchCV + azureml-mlflow + azureml-core",
-        conda_file=CONDA_FILE,
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
-    )
-    env = ml_client.environments.create_or_update(env)
-    logger.info(
-        "Environment registered: %s (version %s)", env.name, env.version
-    )
-    return env
+    try:
+        env = ml_client.environments.get(ENVIRONMENT_NAME, label="latest")
+        logger.info("Reusing existing environment: %s", ENVIRONMENT_NAME)
+        return env
+    except Exception:
+        logger.info("Registering new environment: %s", ENVIRONMENT_NAME)
+        env = Environment(
+            name=ENVIRONMENT_NAME,
+            description="DKV ML case study — multi-model + RandomizedSearchCV + azureml-mlflow",
+            conda_file=CONDA_FILE,
+            image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
+        )
+        env = ml_client.environments.create_or_update(env)
+        logger.info(
+            "Environment registered: %s (version %s)", env.name, env.version
+        )
+        return env
 
 
 # ── Pipeline definition ───────────────────────────────────────────────────────
@@ -366,9 +385,9 @@ def main():
         experiment_name=EXPERIMENT_NAME,
     )
 
-    logger.info("Pipeline submitted successfully ✓")
-    logger.info("Job name   : %s", returned_job.name)
-    logger.info("Status     : %s", returned_job.status)
+    logger.info("Pipeline submitted successfully!")
+    logger.info("Job name: %s", returned_job.name)
+    logger.info("Status: %s", returned_job.status)
     logger.info(
         "Monitor at : https://ml.azure.com/runs/%s"
         "?wsid=/subscriptions/%s/resourceGroups/%s"

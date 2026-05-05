@@ -48,7 +48,7 @@ def plot_confusion_matrix(cm: np.ndarray, output_dir: str) -> str:
     im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
     plt.colorbar(im, ax=ax)
 
-    classes    = ["No Default (0)", "Default (1)"]
+    classes = ["No Default (0)", "Default (1)"]
     tick_marks = range(len(classes))
     ax.set_xticks(tick_marks)
     ax.set_xticklabels(classes, rotation=30, ha="right", fontsize=9)
@@ -65,20 +65,20 @@ def plot_confusion_matrix(cm: np.ndarray, output_dir: str) -> str:
 
     ax.set_ylabel("True label", fontsize=10)
     ax.set_xlabel("Predicted label", fontsize=10)
-    ax.set_title("Confusion Matrix — Credit Default Classifier", fontsize=11)
+    ax.set_title("Confusion Matrix - Credit Default Classifier", fontsize=11)
     fig.tight_layout()
 
     path = os.path.join(output_dir, "confusion_matrix.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    logger.info("Confusion matrix saved → %s", path)
+    logger.info("Confusion matrix saved: %s", path)
     return path
 
 
 def setup_mlflow():
     """
     On Azure ML, tracking URI is auto-injected.
-    Locally, use SQLite to avoid Windows path-with-spaces bug.
+    Locally, use SQLite to avoid path-with-spaces bug.
     """
     if "AZUREML_RUN_ID" not in os.environ:
         BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -97,7 +97,7 @@ def main():
 
     # ── Load ──────────────────────────────────────────────────────────────────
     logger.info("Loading test data from: %s", args.input_test)
-    df     = pd.read_csv(args.input_test)
+    df = pd.read_csv(args.input_test)
     X_test = df.drop(columns=[TARGET])
     y_test = df[TARGET]
     logger.info("Test set: %d rows", len(y_test))
@@ -106,22 +106,22 @@ def main():
     model = joblib.load(os.path.join(args.input_model, "model.pkl"))
 
     # ── Predict ───────────────────────────────────────────────────────────────
-    y_pred      = model.predict(X_test)
+    y_pred = model.predict(X_test)
     y_pred_prob = model.predict_proba(X_test)[:, 1]
 
     # ── Metrics ───────────────────────────────────────────────────────────────
     accuracy  = accuracy_score(y_test, y_pred)
-    auc       = roc_auc_score(y_test, y_pred_prob)
-    f1        = f1_score(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_pred_prob)
+    f1 = f1_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
-    recall    = recall_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
 
     logger.info("=== Evaluation Results ===")
-    logger.info("Accuracy  : %.4f", accuracy)
-    logger.info("ROC-AUC   : %.4f", auc)
-    logger.info("F1 Score  : %.4f", f1)
-    logger.info("Precision : %.4f", precision)
-    logger.info("Recall    : %.4f", recall)
+    logger.info("Accuracy: %.4f", accuracy)
+    logger.info("ROC-AUC: %.4f", auc)
+    logger.info("F1 Score: %.4f", f1)
+    logger.info("Precision: %.4f", precision)
+    logger.info("Recall: %.4f", recall)
 
     report = classification_report(
         y_test, y_pred, target_names=["No Default", "Default"]
@@ -140,7 +140,7 @@ def main():
             "test_recall":    round(recall, 4),
         })
 
-        cm      = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred)
         cm_path = plot_confusion_matrix(cm, args.output_dir)
         mlflow.log_artifact(cm_path, artifact_path="evaluation")
 
@@ -149,7 +149,7 @@ def main():
             f.write(report)
         mlflow.log_artifact(report_path, artifact_path="evaluation")
 
-    logger.info("Evaluation complete ✓  Artefacts → %s", args.output_dir)
+    logger.info("Evaluation complete!  Artefacts: %s", args.output_dir)
 
 
 if __name__ == "__main__":

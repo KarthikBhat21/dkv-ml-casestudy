@@ -50,8 +50,8 @@ def get_args():
 def load_training_data(path: str):
     logger.info("Loading training data from: %s", path)
     df = pd.read_csv(path)
-    X  = df.drop(columns=[TARGET])
-    y  = df[TARGET]
+    X = df.drop(columns=[TARGET])
+    y = df[TARGET]
     logger.info("Training set: %d rows, %d features", *X.shape)
     logger.info("Default rate: %.2f%%", y.mean() * 100)
     return X, y
@@ -282,7 +282,7 @@ def main():
     pos = (y_train == 1).sum()
     scale_pos_weight = neg / pos
     logger.info(
-        "Class ratio — neg: %d | pos: %d | scale_pos_weight: %.2f",
+        "Class ratio - neg: %d, pos: %d, scale_pos_weight: %.2f",
         neg, pos, scale_pos_weight,
     )
 
@@ -342,7 +342,7 @@ def main():
         logger.info("")
         logger.info("=" * 60)
         logger.info(
-            "PHASE 3 — Retraining %s with best params on full training set",
+            "PHASE 3 - Retraining %s with best params on full training set",
             best_name,
         )
         logger.info("=" * 60)
