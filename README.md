@@ -5,10 +5,10 @@ End-to-end Azure ML pipeline predicting credit card payment default
 using the UCI Credit Card Default dataset (30,000 records, binary classification).
 
 ## Pipeline Steps
-1. **Validate** — Check raw dataset column names against schema.yaml. Pipeline stops if validation fails.
-2. **Preprocess** — Clean data, fix undocumented categories, engineer 5 features, scale, split 80/20
-3. **Train** — Compare 7 classifiers (CV ROC-AUC), auto-select best, tune with RandomizedSearchCV
-4. **Evaluate** — Log accuracy, ROC-AUC, F1, precision, recall + confusion matrix
+1. **Validate** - Check raw dataset column names against schema.yaml. Pipeline stops if validation fails.
+2. **Preprocess** - Clean data, fix undocumented categories, engineer 5 features, scale, split 80/20
+3. **Train** - Compare 7 classifiers (CV ROC-AUC), auto-select best, tune with RandomizedSearchCV
+4. **Evaluate** - Log accuracy, ROC-AUC, F1, precision, recall + confusion matrix
 
 ## Models Compared
 Logistic Regression, Decision Tree, Random Forest, KNN, AdaBoost, Gradient Boosting, XGBoost
@@ -34,8 +34,8 @@ Gradient Boosting — selected automatically by cross-validated ROC-AUC, tuned w
 ## Batch Endpoint Deployment
 The trained model is deployed to an Azure ML Managed Batch Endpoint for on-demand scoring.
 
-- **score.py** — Loads the registered model, applies the same feature engineering as preprocessing, returns predictions
-- **deploy_and_test.py** — Creates the endpoint, deploys the latest registered model version, and tests it with sample data
+- **score.py** - Loads the registered model, applies the same feature engineering as preprocessing, returns predictions
+- **deploy_and_test.py** - Creates the endpoint, deploys the latest registered model version, and tests it with sample data
 - **Output:** `predictions.csv` with prediction (0/1), default probability, and label
 - **Version-agnostic:** Uses `label="latest"` to always deploy the most recently registered model
 
