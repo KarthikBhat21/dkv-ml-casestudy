@@ -1,4 +1,4 @@
-# Credit Card Default Prediction — Azure ML Pipeline
+# Credit Card Default Prediction - Azure ML Pipeline
 
 ## Overview
 End-to-end Azure ML pipeline predicting credit card payment default
