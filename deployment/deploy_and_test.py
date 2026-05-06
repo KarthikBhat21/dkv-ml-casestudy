@@ -69,7 +69,7 @@ def deploy_model(ml_client):
     log.info("Fetching latest version of model: %s", MODEL_NAME)
     model = ml_client.models.get(MODEL_NAME, label="latest")
     log.info("Deploying %s v%s ...", model.name, model.version)
-    log.info("This takes 5–10 minutes — please wait.")
+    log.info("This takes 5 to 10 minutes - please wait.")
 
     env = ml_client.environments.get(ENVIRONMENT, label="latest")
 
@@ -95,7 +95,7 @@ def deploy_model(ml_client):
     endpoint = ml_client.batch_endpoints.get(ENDPOINT_NAME)
     endpoint.defaults.deployment_name = DEPLOYMENT_NAME
     ml_client.batch_endpoints.begin_create_or_update(endpoint).result()
-    log.info("Model deployed ✓")
+    log.info("Model deployed!")
 
 
 # ── Step 3: Create test input file ────────────────────────────────────────────
@@ -131,7 +131,7 @@ def create_test_data():
 
     csv_path = os.path.join(TEST_DIR, "sample_input.csv")
     sample.to_csv(csv_path, index=False)
-    log.info("Sample data saved → %s", csv_path)
+    log.info("Sample data saved: %s", csv_path)
 
 
 # ── Step 4: Submit test job and wait ──────────────────────────────────────────
@@ -142,7 +142,7 @@ def test_endpoint(ml_client):
         input=Input(type=AssetTypes.URI_FOLDER, path=TEST_DIR),
     )
     log.info("Job submitted: %s", job.name)
-    log.info("Waiting for results (3–5 minutes)...")
+    log.info("Waiting for results (3-5 minutes)...")
 
     while True:
         job = ml_client.jobs.get(job.name)

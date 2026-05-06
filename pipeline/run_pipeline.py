@@ -87,7 +87,7 @@ def build_pipeline(env: Environment):
     # ── Step 1: Validate ───────────────────────────────────────────────────────
     validate_component = command(
         name="validate",
-        display_name="Step 1 — Validate Data",
+        display_name="Step 1 - Validate Data",
         description=(
             "Validate raw dataset column names against schema.yaml. "
             "Pipeline stops immediately if validation fails."
@@ -117,7 +117,7 @@ def build_pipeline(env: Environment):
     # ── Step 2: Preprocess ─────────────────────────────────────────────────────
     preprocess_component = command(
         name="preprocess",
-        display_name="Step 2 — Preprocess",
+        display_name="Step 2 - Preprocess",
         description=(
             "Load raw XLS, clean, engineer features, "
             "scale with StandardScaler, split 80/20 train/test."
@@ -156,7 +156,7 @@ def build_pipeline(env: Environment):
     # ── Step 3: Train ──────────────────────────────────────────────────────────
     train_component = command(
         name="train",
-        display_name="Step 3 — Train (7 models → best → tune)",
+        display_name="Step 3 - Train",
         description=(
             "Compare 7 classifiers with default params (CV ROC-AUC), "
             "pick winner, run RandomizedSearchCV on winner, "
@@ -187,7 +187,7 @@ def build_pipeline(env: Environment):
     # ── Step 4: Evaluate ───────────────────────────────────────────────────────
     evaluate_component = command(
         name="evaluate",
-        display_name="Step 4 — Evaluate",
+        display_name="Step 4 - Evaluate",
         description=(
             "Evaluate best model on held-out test set. "
             "Log accuracy, AUC, F1, precision, recall. "
@@ -217,7 +217,7 @@ def build_pipeline(env: Environment):
         },
         environment=env,
         compute=COMPUTE_CLUSTER,
-        code=REPO_ROOT,        # ← consistent with other steps
+        code=REPO_ROOT,   
     )
 
     # ── Wire steps ─────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ def build_pipeline(env: Environment):
             "validate → preprocess → train → evaluate. "
             "Pipeline stops if column validation fails."
         ),
-        display_name="DKV Credit Default — Full Pipeline",
+        display_name="DKV Credit Default - Full Pipeline",
     )
     def credit_default_pipeline(raw_data: Input):
 
