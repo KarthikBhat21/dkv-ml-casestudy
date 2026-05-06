@@ -14,7 +14,7 @@ using the UCI Credit Card Default dataset (30,000 records, binary classification
 Logistic Regression, Decision Tree, Random Forest, KNN, AdaBoost, Gradient Boosting, XGBoost
 
 ## Best Model
-Gradient Boosting — selected automatically by cross-validated ROC-AUC, tuned with RandomizedSearchCV
+Gradient Boosting - selected automatically by cross-validated ROC-AUC, tuned with RandomizedSearchCV
 
 ## Key Metrics (Test Set)
 | Metric | Score |
@@ -41,7 +41,7 @@ The trained model is deployed to an Azure ML Managed Batch Endpoint for on-deman
 
 ## How to Run
 ```bash
-# Local test — run in order
+# Local test - run in order
 python src/validate.py
 python src/preprocess.py
 python src/train.py
@@ -57,9 +57,9 @@ python deployment/deploy_and_test.py
 ## Notes
 - Data validation stops the pipeline if column names don't match schema.yaml
 - Class imbalance handled via `scale_pos_weight` and `class_weight='balanced'`
-- Hyperparameter search space defined in `params.yaml` — no hardcoded values in code
-- `StandardScaler` fitted on training data only — no data leakage
-- RandomizedSearchCV applied to winning model only — faster than tuning all models
+- Hyperparameter search space defined in `params.yaml` - no hardcoded values in code
+- `StandardScaler` fitted on training data only - no data leakage
+- RandomizedSearchCV applied to winning model only - faster than tuning all models
 - Model auto-registered in Azure ML Model Registry on pipeline completion
 - Batch endpoint chosen over online endpoint for credit risk scoring use case (overnight scoring of many customers vs real-time single requests)
 
